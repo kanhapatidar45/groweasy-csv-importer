@@ -29,6 +29,8 @@ Map each row into this exact CRM JSON structure:
 - possession_time
 - description
 
+Important: Column names can be misleading or generic. Always check the ACTUAL VALUE in each field, not just the column header. For example, if a column named "city" or "notes" contains a value like "someone@email.com", treat it as the email field, not as city or notes. Look at every field's value carefully before deciding a row has no email/phone.
+
 Rules:
 - If multiple emails exist, use the first one; put the rest in crm_note.
 - If multiple phone numbers exist, use the first one; put the rest in crm_note.
