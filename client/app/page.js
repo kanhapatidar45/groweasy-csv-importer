@@ -4,8 +4,7 @@ import { useState } from 'react';
 import UploadBox from '../components/UploadBox';
 import PreviewTable from '../components/PreviewTable';
 import ResultTable from '../components/ResultTable';
-
-const API_BASE_URL = 'http://localhost:5000/api/upload';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000/api/upload';
 
 export default function Home() {
   const [file, setFile] = useState(null);
