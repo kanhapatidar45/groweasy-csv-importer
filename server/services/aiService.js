@@ -1,17 +1,25 @@
 const Groq = require('groq-sdk');
-
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Allowed values (assignment ke rules ke according)
 const CRM_STATUS_VALUES = ['GOOD_LEAD_FOLLOW_UP', 'DID_NOT_CONNECT', 'BAD_LEAD', 'SALE_DONE'];
 const DATA_SOURCE_VALUES = ['leads_on_demand', 'meridian_tower', 'eden_park', 'varah_swamy', 'sarjapur_plots'];
 
+// Regex patterns — safety net ke liye (sirf AI ke bharose nahi rehna)
+const EMAIL_REGEX = /[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]+/;
+const PHONE_REGEX = /\d{10}/;
+
+// Row ke saare values check karo — kahin bhi email/phone pattern hai kya
+const hasContactInfo = (row) => {
+  const allValues = Object.values(row).join(' ');
+  return EMAIL_REGEX.test(allValues) || PHONE_REGEX.test(allValues);
+};
+
 // Ek batch ko AI ko bhejne wala function
 const mapRowsWithAI = async (rows) => {
   const today = new Date().toISOString().slice(0, 19).replace('T', ' '); // e.g. "2026-07-08 14:30:00"
 
   const prompt = `You are a CRM data mapping assistant. You will receive raw CSV rows with unknown/inconsistent column names.
-
 Map each row into this exact CRM JSON structure:
 - created_at (must be parseable by JavaScript's new Date(). If no date/timestamp information exists in the row, use "${today}" instead of leaving it blank or using a placeholder date like 1970-01-01)
 - name
@@ -53,11 +61,24 @@ Return format (JSON array only):
   });
 
   const responseText = completion.choices[0].message.content;
-
   // AI kabhi-kabhi ```json ... ``` mein wrap kar deta hai, usko clean karte hain
   const cleaned = responseText.replace(/```json|```/g, '').trim();
+  const results = JSON.parse(cleaned);
 
-  return JSON.parse(cleaned);
+  // SAFETY NET: agar AI ne "skip: true" bola but row mein actually email/phone hai,
+  // toh usse skip mat hone do — automatically recover kar do
+  const finalResults = results.map((result, index) => {
+    if (result.skip === true && hasContactInfo(rows[index])) {
+      return {
+        ...result,
+        skip: false,
+        crm_note: (result.crm_note || '') + ' [Auto-recovered: contact info found in raw data]',
+      };
+    }
+    return result;
+  });
+
+  return finalResults;
 };
 
 // Retry wrapper - agar AI call fail ho jaye, thoda ruk ke dobara try karo
@@ -76,4 +97,4 @@ const mapRowsWithRetry = async (rows, maxRetries = 2) => {
   }
 };
 
-module.exports = { mapRowsWithAI, mapRowsWithRetry };
+module.exports = { mapRowsWithAI, mapRowsWithRetry, hasContactInfo };
