@@ -13,7 +13,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
-
+  const [darkMode, setDarkMode] = useState(false);
   const handleFileSelect = (selectedFile) => {
     setFile(selectedFile);
     setError('');
@@ -71,20 +71,32 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
+   <main className={`min-h-screen p-8 transition-colors ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
-          GrowEasy AI CSV Importer
-        </h1>
-        <p className="text-gray-600 mb-8">
-          Upload any CSV format — AI will map it to CRM fields automatically.
-        </p>
-
+        <div className="flex justify-between items-start mb-8">
+          <div>
+            <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              GrowEasy AI CSV Importer
+            </h1>
+            <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+              Upload any CSV format — AI will map it to CRM fields automatically.
+            </p>
+          </div>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+            }`}
+          >
+            {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+          </button>
+        </div>
         <UploadBox
           file={file}
           onFileSelect={handleFileSelect}
           onUpload={handleUpload}
           loading={loading}
+          darkMode={darkMode}
         />
 
         {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
@@ -93,9 +105,10 @@ export default function Home() {
           previewData={previewData}
           onConfirm={handleConfirm}
           processing={processing}
+          darkMode={darkMode}
         />
 
-        <ResultTable resultData={resultData} />
+       <ResultTable resultData={resultData} darkMode={darkMode} />
       </div>
     </main>
   );

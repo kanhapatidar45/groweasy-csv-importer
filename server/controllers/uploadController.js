@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { parse } = require('csv-parse/sync');
-const { mapRowsWithAI } = require('../services/aiService');
+const { mapRowsWithRetry } = require('../services/aiService');
+
 const previewCSV = (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -29,14 +30,14 @@ const previewCSV = (req, res) => {
 
 // Step 2: Take confirmed CSV rows, send to AI in batches, return CRM formatted result
 const processWithAI = async (req, res) => {
-  const { rows } = req.body; // frontend se confirmed rows aayenge
+  const { rows } = req.body;
 
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
     return res.status(400).json({ error: 'No rows provided' });
   }
 
   try {
-    const BATCH_SIZE = 20; // ek baar mein AI ko 20 rows bhejenge
+    const BATCH_SIZE = 20;
     const batches = [];
 
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
@@ -46,7 +47,7 @@ const processWithAI = async (req, res) => {
     let allResults = [];
 
     for (const batch of batches) {
-      const mapped = await mapRowsWithAI(batch);
+      const mapped = await mapRowsWithRetry(batch);
       allResults = allResults.concat(mapped);
     }
 
@@ -64,4 +65,5 @@ const processWithAI = async (req, res) => {
     res.status(500).json({ error: 'AI processing failed', details: err.message });
   }
 };
+
 module.exports = { previewCSV, processWithAI };

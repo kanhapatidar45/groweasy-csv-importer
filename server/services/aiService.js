@@ -6,12 +6,14 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const CRM_STATUS_VALUES = ['GOOD_LEAD_FOLLOW_UP', 'DID_NOT_CONNECT', 'BAD_LEAD', 'SALE_DONE'];
 const DATA_SOURCE_VALUES = ['leads_on_demand', 'meridian_tower', 'eden_park', 'varah_swamy', 'sarjapur_plots'];
 
-// Ek batch (rows ka chhota group) ko AI ko bhejne wala function
+// Ek batch ko AI ko bhejne wala function
 const mapRowsWithAI = async (rows) => {
+  const today = new Date().toISOString().slice(0, 19).replace('T', ' '); // e.g. "2026-07-08 14:30:00"
+
   const prompt = `You are a CRM data mapping assistant. You will receive raw CSV rows with unknown/inconsistent column names.
 
 Map each row into this exact CRM JSON structure:
-- created_at (must be parseable by JavaScript's new Date())
+- created_at (must be parseable by JavaScript's new Date(). If no date/timestamp information exists in the row, use "${today}" instead of leaving it blank or using a placeholder date like 1970-01-01)
 - name
 - email
 - country_code
@@ -56,4 +58,20 @@ Return format (JSON array only):
   return JSON.parse(cleaned);
 };
 
-module.exports = { mapRowsWithAI };
+// Retry wrapper - agar AI call fail ho jaye, thoda ruk ke dobara try karo
+const mapRowsWithRetry = async (rows, maxRetries = 2) => {
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    try {
+      return await mapRowsWithAI(rows);
+    } catch (err) {
+      console.log(`Attempt ${attempt} failed:`, err.message);
+      if (attempt === maxRetries + 1) {
+        throw err; // sab retries fail hone ke baad, error throw karo
+      }
+      // 1 second ruk ke dobara try karo
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+};
+
+module.exports = { mapRowsWithAI, mapRowsWithRetry };

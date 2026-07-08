@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 
-export default function UploadBox({ file, onFileSelect, onUpload, loading }) {
+export default function UploadBox({ file, onFileSelect, onUpload, loading, darkMode }) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -37,9 +37,9 @@ export default function UploadBox({ file, onFileSelect, onUpload, loading }) {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`bg-white rounded-lg shadow p-10 mb-4 border-2 border-dashed cursor-pointer text-center transition-colors ${
-          isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-        }`}
+       className={`rounded-lg shadow p-10 mb-4 border-2 border-dashed cursor-pointer text-center transition-colors ${
+            darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'
+          } ${isDragging ? (darkMode ? 'border-blue-400 bg-gray-700' : 'border-blue-500 bg-blue-50') : ''}`}
       >
         <input
           ref={fileInputRef}
@@ -48,7 +48,7 @@ export default function UploadBox({ file, onFileSelect, onUpload, loading }) {
           onChange={handleInputChange}
           className="hidden"
         />
-        <p className="text-gray-600 mb-1">
+      <p className={darkMode ? 'text-gray-300' : 'text-gray-600'}>
           {isDragging ? 'Drop your CSV here' : 'Drag & drop a CSV file here, or click to browse'}
         </p>
         {file && (
