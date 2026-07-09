@@ -19,7 +19,10 @@ const hasContactInfo = (row) => {
 const mapRowsWithAI = async (rows) => {
   const today = new Date().toISOString().slice(0, 19).replace('T', ' '); // e.g. "2026-07-08 14:30:00"
 
+const rowsWithIndex = rows.map((row, i) => ({ _idx: i, ...row }));
+
   const prompt = `You are a CRM data mapping assistant. You will receive raw CSV rows with unknown/inconsistent column names.
+Each row has an "_idx" field. You MUST include this exact same "_idx" value (unchanged) in your output for that row.
 Map each row into this exact CRM JSON structure:
 - created_at (must be parseable by JavaScript's new Date(). If no date/timestamp information exists in the row, use "${today}" instead of leaving it blank or using a placeholder date like 1970-01-01)
 - name
@@ -46,12 +49,12 @@ Rules:
 - Return ONLY a valid JSON array, no explanation, no markdown formatting, no backticks.
 
 Raw rows:
-${JSON.stringify(rows, null, 2)}
+${JSON.stringify(rowsWithIndex, null, 2)}
 
 Return format (JSON array only):
 [
-  { "skip": false, "created_at": "...", "name": "...", "email": "...", ... },
-  { "skip": true }
+  { "_idx": 0, "skip": false, "created_at": "...", "name": "...", "email": "...", ... },
+  { "_idx": 1, "skip": true }
 ]`;
 
   const completion = await groq.chat.completions.create({
@@ -67,8 +70,10 @@ Return format (JSON array only):
 
   // SAFETY NET: agar AI ne "skip: true" bola but row mein actually email/phone hai,
   // toh usse skip mat hone do — automatically recover kar do
-  const finalResults = results.map((result, index) => {
-    if (result.skip === true && hasContactInfo(rows[index])) {
+ const finalResults = results.map((result) => {
+    const originalRow = rows[result._idx];
+
+    if (result.skip === true && originalRow && hasContactInfo(originalRow)) {
       return {
         ...result,
         skip: false,
@@ -78,9 +83,9 @@ Return format (JSON array only):
     return result;
   });
 
-  return finalResults;
+  // _idx sirf internal matching ke liye tha, final output se hata do
+  return finalResults.map(({ _idx, ...rest }) => rest);
 };
-
 // Retry wrapper - agar AI call fail ho jaye, thoda ruk ke dobara try karo
 const mapRowsWithRetry = async (rows, maxRetries = 2) => {
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
