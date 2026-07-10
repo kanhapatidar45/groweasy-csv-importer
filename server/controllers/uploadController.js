@@ -37,7 +37,7 @@ const processWithAI = async (req, res) => {
   }
 
   try {
-    const BATCH_SIZE = 20;
+    const BATCH_SIZE = 10;
     const batches = [];
 
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
